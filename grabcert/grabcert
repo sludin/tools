@@ -1,0 +1,14 @@
+#!/bin/sh
+
+HOST=$1
+PORT=$2
+OPENSSL=`which openssl`
+
+if [ -z "$PORT" ]; then
+   PORT=443
+fi
+
+cert=`echo -n | $OPENSSL s_client -connect $HOST:$PORT 2>&1 | sed -n '/---BEGIN CERTIFICATE/,/---END CERTIFICATAE/p; /END CERTIFICATE/q'`
+
+echo "$cert"
+
