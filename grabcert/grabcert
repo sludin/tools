@@ -1,8 +1,81 @@
 #!/bin/sh
 
+usage()
+{
+    echo "USAGE: grabcert [-adeish] host [port]"
+    echo "    port: default 443"
+    echo "    No options: output certificate"
+    echo "    -d: Start date"
+    echo "    -e: End date"
+    echo "    -i: Issuer"
+    echo "    -s: Subkect"
+    echo "    -a: All of the above"
+    echo "    -h: This help"
+    echo
+}
+
+OPENSSL=`which openssl`
+
+args=`getopt adeish $*`
+if [ $? -ne 0 ]; then
+    echo "Unknown option"
+    usage
+    exit 1
+fi
+set -- $args
+
+openssl_options=""
+
+while true
+do
+    case "$1" in
+        -a)
+            openssl_options="-startdate -enddate -issuer -subject"
+            shift
+            ;;
+        -d)
+            openssl_options="$openssl_options -startdate"
+            shift
+            ;;
+        -e)
+            openssl_options="$openssl_options -enddate"
+            shift
+            ;;
+        -i)
+            openssl_options="$openssl_options -issuer"
+            shift
+            ;;
+        -s)
+            openssl_options="$openssl_options -subject"
+            shift
+            ;;
+        -h)
+            usage
+            shift
+            exit 1
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+
 HOST=$1
 PORT=$2
-OPENSSL=`which openssl`
+
+if [ -z "$HOST" ]; then
+    echo "No host indicated"
+    usage
+    exit 1
+fi
+
 
 if [ -z "$PORT" ]; then
    PORT=443
@@ -10,5 +83,10 @@ fi
 
 cert=`echo -n | $OPENSSL s_client -connect $HOST:$PORT 2>&1 | sed -n '/---BEGIN CERTIFICATE/,/---END CERTIFICATAE/p; /END CERTIFICATE/q'`
 
-echo "$cert"
+if [ -z "$openssl_options" ]; then
+    echo "$cert"
+else
+    echo "$cert" | $OPENSSL x509 -noout $openssl_options
+fi
+
 
